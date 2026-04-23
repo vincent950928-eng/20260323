@@ -1,470 +1,121 @@
-let timeOffset = 0;
+let time = 0;
+let blades = [];
+let bubbles = [];
+const numBlades = 20; // 減少水草數量，使其分佈更分散
+const numBubbles = 15;
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  noStroke();
+  createCanvas(windowWidth, windowHeight).parent('p5-canvas-container'); // 將畫布綁定到指定容器
+  // 定義指定的五種顏色，加入透明度特效 (99 代表約 60% 透明度)
+  let palette = ['#ffbe0b99', '#fb560799', '#ff006e99', '#8338ec99', '#3a86ff99'];
+  
+  // 初始化每根水草的獨特屬性
+  for (let i = 0; i < numBlades; i++) {
+    blades.push({
+      color: random(palette),
+      offset: random(1000),
+      thickness: random(30, 60),
+      hScale: random(0.3, 0.66), // 高度比例，最高不超過 2/3
+      frequency: random(0.5, 1.5) // 搖晃頻率（速度倍率）
+    });
+  }
+
+  // 初始化水泡
+  for (let i = 0; i < numBubbles; i++) {
+    bubbles.push(initBubble());
+  }
+}
+
+// 水泡初始化與重置函數
+function initBubble() {
+  return {
+    x: random(width),
+    y: height + random(20, 500),
+    size: random(10, 25),
+    speed: random(1, 3),
+    burstY: random(height * 0.1, height * 0.6), // 升到視窗 10%~60% 處破掉
+    isBursting: false,
+    burstFrame: 0
+  };
 }
 
 function draw() {
-  background('#caf0f8');
-  
-  // 設定水草顏色 (深海綠，帶透明度)
-  fill(46, 139, 87, 200);
+  clear(); // 核心修改：先清空畫布，防止透明度疊加導致網頁被遮蔽
+  background(227, 242, 253, 153); // 將透明度調成 0.6 (Alpha 值 153)，呈現半透明水色效果
+  blendMode(BLEND); // 使用標準透明混合模式
+  noFill();
+  strokeJoin(ROUND);
 
-  let startX = width / 2; // 水草根部 X 座標
-  let startY = height;    // 水草根部 Y 座標
-  let plantHeight = 600;  // 水草高度 (增加高度)
-  let segments = 30;      // 分段數
-  let baseWidth = 60;     // 根部寬度 (加粗)
+  let startY = height;
+  let segments = 30;
 
-  beginShape();
-  
-  // 繪製左側 (從底部往上)
-  for (let i = 0; i <= segments; i++) {
-    let t = i / segments; // 0 到 1 的比例
-    let y = startY - (t * plantHeight);
-    
-    // 使用 noise 產生擺動值
-    let noiseVal = noise(i * 0.1, timeOffset);
-    // 使用 map 將 noise (0~1) 映射到擺動範圍 (-40 ~ 40)
-    let xOffset = map(noiseVal, 0, 1, -80, 80); // 增加搖晃距離 (-80 ~ 80)
-    
-    // 計算最終 X 座標：根部 (t=0) 不動，越往上擺動幅度越大
-    let finalX = startX + (xOffset * t); 
-    
-    // 寬度隨高度遞減
-    let currentWidth = (1 - t) * baseWidth;
-    
-let grasses = [];
-let timeOffset = 0;
-// 指定的顏色色票
-let colors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
+  // 迴圈產生 50 根水草
+  for (let j = 0; j < numBlades; j++) {
+    let b = blades[j];
+    // 均衡分佈在視窗寬度內
+    let startX = map(j, 0, numBlades - 1, 20, width - 20);
+    stroke(b.color); // 使用該水草的顏色
+    strokeWeight(b.thickness); // 使用該水草的粗細
 
-function setup() {
-  createCanvas(windowWidth, windowHeight);
-  noStroke();
-  initGrass();
-}
+    let segmentHeight = (height * b.hScale) / segments; // 使用該水草的高度
 
-function draw() {
-  background('#caf0f8');
-  
-  // 繪製所有的小草
-  for (let g of grasses) {
-    g.display();
-  }
-
-  // 更新時間變數，產生動畫效果
-  timeOffset += 0.01;
-}
-
-// 初始化水草
-function initGrass() {
-  grasses = [];
-  for (let i = 0; i < 50; i++) {
-    // 均衡產生在視窗的寬度內 (利用 map 將 0-49 映射到 0-width)
-    // 加上 random(-10, 10) 讓位置稍微自然一點，不要太死板的等距排列
-    let x = map(i, 0, 50, 0, width) + random(-10, 10);
-    // 隨機選取顏色
-    let col = random(colors);
-    grasses.push(new Grass(x, col));
-  }
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  // 視窗大小改變時，重新計算分佈
-  initGrass();
-}
-
-// 定義小草類別
-class Grass {
-  constructor(x, colHex) {
-    this.x = x;
-    // 設定顏色並加上透明度
-    this.color = color(colHex);
-    this.color.setAlpha(200); 
-    
-    // 隨機高度與寬度
-    this.plantHeight = random(400, 700); 
-    this.baseWidth = random(20, 50);
-    
-    // 每個草有獨立的雜訊偏移，讓它們擺動時不會完全同步
-    this.noiseShift = random(1000);
-    this.segments = 30;
-  }
-
-  display() {
-    fill(this.color);
     beginShape();
     
-    // 繪製左側 (從底部往上)
-    for (let i = 0; i <= this.segments; i++) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      // 使用 noise 產生擺動值 (加入 this.noiseShift 錯開波形)
-      let noiseVal = noise(i * 0.1, timeOffset + this.noiseShift);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      
-      // 根部不動 (t=0 時 xOffset * t = 0)
-      let finalX = this.x + (xOffset * t); 
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX - currentWidth / 2, y);
+    // 起始控制點
+    curveVertex(startX, startY);
+
+    for (let i = 0; i <= segments; i++) {
+      let y = startY - i * segmentHeight;
+
+      // 使用專屬的頻率與偏移量計算 noise
+      let noiseVal = noise(i * 0.1, time * b.frequency + b.offset);
+
+      // 映射搖晃幅度
+      let swayRange = map(i, 0, segments, 0, 250); 
+      let xOffset = map(noiseVal, 0, 1, -swayRange, swayRange);
+
+      curveVertex(startX + xOffset, y);
+
+      // 結束控制點
+      if (i === segments) {
+        curveVertex(startX + xOffset, y);
+      }
     }
+    endShape();
+  }
 
-    // 繪製右側 (從頂部往下，確保圖形閉合)
-    for (let i = this.segments; i >= 0; i--) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      let noiseVal = noise(i * 0.1, timeOffset + this.noiseShift);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      let finalX = this.x + (xOffset * t);
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX + currentWidth / 2, y);
+  // 繪製與更新水泡
+  for (let i = 0; i < bubbles.length; i++) {
+    let bbl = bubbles[i];
+    if (!bbl.isBursting) {
+      // 向上移動與微幅左右晃動
+      bbl.y -= bbl.speed;
+      bbl.x += sin(time + i) * 0.5;
+
+      // 檢查是否到達破裂高度
+      if (bbl.y < bbl.burstY) bbl.isBursting = true;
+
+      // 繪製水泡主體 (白色 0.5 透明度)
+      noStroke();
+      fill(255, 127);
+      circle(bbl.x, bbl.y, bbl.size);
+      // 繪製高光圓圈 (白色 0.7 透明度)
+      fill(255, 178);
+      circle(bbl.x - bbl.size * 0.2, bbl.y - bbl.size * 0.2, bbl.size * 0.3);
+    } else {
+      // 破裂動畫：擴大的圓環
+      bbl.burstFrame++;
+      noFill();
+      stroke(255, 127 * (1 - bbl.burstFrame / 10)); // 隨時間變淡
+      strokeWeight(2);
+      circle(bbl.x, bbl.y, bbl.size + bbl.burstFrame * 4);
+      if (bbl.burstFrame > 10) bubbles[i] = initBubble(); // 動畫結束後重置
     }
-    
-    endShape(CLOSE);
-  }
-}
-let grasses = [];
-let timeOffset = 0;
-// 指定的顏色色票
-let colors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
-
-function setup() {
-  createCanvas(windowWidth, windowHeight);
-  noStroke();
-  initGrass();
-}
-
-function draw() {
-  background('#caf0f8');
-  
-  // 繪製所有的小草
-  for (let g of grasses) {
-    g.display();
   }
 
-  // 更新時間變數，產生動畫效果
-  timeOffset += 0.01;
+  time += 0.02; // 調整此數值可改變水波晃動速度
 }
 
-// 初始化水草
-function initGrass() {
-  grasses = [];
-  for (let i = 0; i < 50; i++) {
-    // 均衡產生在視窗的寬度內 (利用 map 將 0-49 映射到 0-width)
-    // 加上 random(-10, 10) 讓位置稍微自然一點，不要太死板的等距排列
-    let x = map(i, 0, 50, 0, width) + random(-10, 10);
-    // 隨機選取顏色
-    let col = random(colors);
-    grasses.push(new Grass(x, col));
-  }
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  // 視窗大小改變時，重新計算分佈
-  initGrass();
-}
-
-// 定義小草類別
-class Grass {
-  constructor(x, colHex) {
-    this.x = x;
-    // 設定顏色並加上透明度
-    this.color = color(colHex);
-    this.color.setAlpha(200); 
-    
-    // 隨機高度與寬度
-    this.plantHeight = random(400, 700); 
-    this.baseWidth = random(20, 50);
-    
-    // 每個草有獨立的雜訊偏移，讓它們擺動時不會完全同步
-    this.noiseShift = random(1000);
-    this.segments = 30;
-  }
-
-  display() {
-    fill(this.color);
-    beginShape();
-    
-    // 繪製左側 (從底部往上)
-    for (let i = 0; i <= this.segments; i++) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      // 使用 noise 產生擺動值 (加入 this.noiseShift 錯開波形)
-      let noiseVal = noise(i * 0.1, timeOffset + this.noiseShift);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      
-      // 根部不動 (t=0 時 xOffset * t = 0)
-      let finalX = this.x + (xOffset * t); 
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX - currentWidth / 2, y);
-    }
-
-    // 繪製右側 (從頂部往下，確保圖形閉合)
-    for (let i = this.segments; i >= 0; i--) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      let noiseVal = noise(i * 0.1, timeOffset + this.noiseShift);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      let finalX = this.x + (xOffset * t);
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX + currentWidth / 2, y);
-    }
-    
-    endShape(CLOSE);
-  }
-}
-let grasses = [];
-let colors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
-
-function setup() {
-  createCanvas(windowWidth, windowHeight);
-  noStroke();
-  initGrass();
-}
-
-function draw() {
-  background('#caf0f8');
-  
-  // 繪製所有的小草
-  for (let g of grasses) {
-    g.display();
-  }
-}
-
-// 初始化水草
-function initGrass() {
-  grasses = [];
-  for (let i = 0; i < 50; i++) {
-    // 均衡產生在視窗的寬度內 (利用 map 將 0-49 映射到 0-width)
-    // 加上 random(-20, 20) 增加一些隨機交錯感
-    let x = map(i, 0, 50, 0, width) + random(-20, 20);
-    // 隨機選取顏色
-    let col = random(colors);
-    grasses.push(new Grass(x, col));
-  }
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  // 視窗大小改變時，重新計算分佈
-  initGrass();
-}
-
-// 定義小草類別
-class Grass {
-  constructor(x, colHex) {
-    this.x = x;
-    // 設定顏色並加上透明度
-    this.color = color(colHex);
-    this.color.setAlpha(200); 
-    
-    // 1. 線條寬度要在 30 到 60 間
-    this.baseWidth = random(30, 60);
-    
-    // 2. 水草高度不能超過視窗高度的 2/3 (這裡設定在 1/3 ~ 2/3 之間)
-    this.plantHeight = random(height / 3, height * 2 / 3);
-    
-    this.segments = 30;
-    
-    // 3. 搖晃的速度與方向每根也要不一樣
-    // timeOffset 決定起始的擺動位置(方向/相位)
-    this.timeOffset = random(1000); 
-    // swaySpeed 決定擺動的快慢
-    this.swaySpeed = random(0.005, 0.02); 
-  }
-
-  display() {
-    fill(this.color);
-    beginShape();
-    
-    // 繪製左側 (從底部往上)
-    for (let i = 0; i <= this.segments; i++) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      // 使用 noise 產生擺動值 (使用自己的 timeOffset)
-      let noiseVal = noise(i * 0.1, this.timeOffset);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      
-      // 根部不動 (t=0 時 xOffset * t = 0)
-      let finalX = this.x + (xOffset * t); 
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX - currentWidth / 2, y);
-    }
-
-    // 繪製右側 (從頂部往下，確保圖形閉合)
-    for (let i = this.segments; i >= 0; i--) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      let noiseVal = noise(i * 0.1, this.timeOffset);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      let finalX = this.x + (xOffset * t);
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX + currentWidth / 2, y);
-    }
-    
-    endShape(CLOSE);
-
-    // 更新這根水草的時間，產生獨立的動畫效果
-    this.timeOffset += this.swaySpeed;
-  }
-}
-let grasses = [];
-let colors = ['#ffbe0b', '#fb5607', '#ff006e', '#8338ec', '#3a86ff'];
-
-function setup() {
-  let canvas = createCanvas(windowWidth, windowHeight);
-  
-  // 設定畫布樣式，讓它浮在 iframe 上方但允許點擊穿透
-  canvas.style('position', 'fixed');
-  canvas.style('top', '0');
-  canvas.style('left', '0');
-  canvas.style('z-index', '1'); // 畫布層級在上
-  canvas.style('pointer-events', 'none'); // 關鍵：讓滑鼠事件穿透畫布，使 iframe 可被操作
-
-  // 建立 iframe 顯示網頁
-  let iframe = createElement('iframe');
-  iframe.attribute('src', 'https://www.et.tku.edu.tw');
-  iframe.style('position', 'fixed');
-  iframe.style('top', '0');
-  iframe.style('left', '0');
-  iframe.style('width', '100%');
-  iframe.style('height', '100%');
-  iframe.style('border', 'none');
-  iframe.style('z-index', '0'); // iframe 層級在下
-
-  noStroke();
-  initGrass();
-}
-
-function draw() {
-  // 先清除畫布，確保不會因為疊加導致背景變不透明
-  clear();
-  
-  // 設定半透明背景：#caf0f8 (RGB: 202, 240, 248), Alpha: 51 (約 0.2)
-  background(202, 240, 248, 51);
-  
-  // 繪製所有的小草
-  for (let g of grasses) {
-    g.display();
-  }
-}
-
-// 初始化水草
-function initGrass() {
-  grasses = [];
-  for (let i = 0; i < 50; i++) {
-    // 均衡產生在視窗的寬度內
-    // 加上 random(-20, 20) 增加一些自然隨機感
-    let x = map(i, 0, 50, 0, width) + random(-20, 20);
-    // 隨機選取顏色
-    let col = random(colors);
-    grasses.push(new Grass(x, col));
-  }
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  initGrass(); // 視窗大小改變時重新生成，以適應新寬度
-}
-
-// 定義小草類別
-class Grass {
-  constructor(x, colHex) {
-    this.x = x;
-    this.color = color(colHex);
-    this.color.setAlpha(200); 
-    
-    // 線條寬度要在 30 到 60 間
-    this.baseWidth = random(30, 60);
-    
-    // 水草高度不能超過視窗高度的 2/3 (設定在 1/3 ~ 2/3 之間)
-    this.plantHeight = random(height / 3, height * 2 / 3);
-    
-    this.segments = 30;
-    
-    // 搖晃的速度與方向每根也要不一樣
-    this.noiseOffset = random(1000); 
-    this.swaySpeed = random(0.005, 0.02); 
-  }
-
-  display() {
-    fill(this.color);
-    beginShape();
-    
-    // 繪製左側 (從底部往上)
-    for (let i = 0; i <= this.segments; i++) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      // 使用各自獨立的 noiseOffset 產生擺動值
-      let noiseVal = noise(i * 0.1, this.noiseOffset);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      
-      // 根部不動 (t=0 時 xOffset * t = 0)
-      let finalX = this.x + (xOffset * t); 
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX - currentWidth / 2, y);
-    }
-
-    // 繪製右側 (從頂部往下，確保圖形閉合)
-    for (let i = this.segments; i >= 0; i--) {
-      let t = i / this.segments;
-      let y = height - (t * this.plantHeight);
-      
-      let noiseVal = noise(i * 0.1, this.noiseOffset);
-      let xOffset = map(noiseVal, 0, 1, -80, 80);
-      let finalX = this.x + (xOffset * t);
-      let currentWidth = (1 - t) * this.baseWidth;
-      
-      curveVertex(finalX + currentWidth / 2, y);
-    }
-    
-    endShape(CLOSE);
-
-    // 更新這根水草的時間，產生獨立的動畫效果
-    this.noiseOffset += this.swaySpeed;
-  }
-}
-    curveVertex(finalX - currentWidth / 2, y);
-  }
-
-  // 繪製右側 (從頂部往下，確保圖形閉合)
-  for (let i = segments; i >= 0; i--) {
-    let t = i / segments;
-    let y = startY - (t * plantHeight);
-    
-    let noiseVal = noise(i * 0.1, timeOffset);
-    let xOffset = map(noiseVal, 0, 1, -80, 80); // 增加搖晃距離 (-80 ~ 80)
-    let finalX = startX + (xOffset * t);
-    let currentWidth = (1 - t) * baseWidth;
-    
-    curveVertex(finalX + currentWidth / 2, y);
-  }
-  
-  endShape(CLOSE);
-
-  // 更新時間變數，產生動畫效果
-  timeOffset += 0.01;
-}
-
-// 視窗大小改變時調整畫布
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
